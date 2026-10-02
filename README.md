@@ -1,0 +1,79 @@
+# wadahdb-studio
+
+wadahdb-studio is a free, open-source Linux desktop client for MySQL and MariaDB. The project is an early pre-release implementation for solo developers and solo DevOps practitioners who want a capable SQL workbench without a subscription.
+
+## Current features
+
+- MySQL or MariaDB connection profiles over TCP, TLS, or an SSH tunnel.
+- Optional password storage in the Linux Secret Service keyring.
+- Multi-tab SQL editor with schema-aware completion, query history, saved queries, cancellation, EXPLAIN, and transaction controls.
+- Schema browser for databases, tables, views, routines, triggers, and indexes.
+- Paged data grid with server-side filtering and sorting; rows can be edited when the table has a primary key.
+- SQL tools for tables, indexes, databases, users, grants, and process inspection. Generated SQL is shown in the editor before execution.
+- Native backup and restore without `mysqldump` or `mysql` binaries. Full backups include table data, views, triggers, routines, and events; selected-table backups include their table data and triggers.
+- Restore inspection with object conflict detection and explicit overwrite confirmation.
+- CSV and SQL import, plus CSV and JSON export for query results and full tables.
+
+This is not a public release yet. The database-version compatibility matrix and cross-distribution AppImage behavior still need release validation. See [the MVP specification](docs/mvp-spec.md) for the target and remaining release checks.
+
+## Development
+
+Install Node.js, Go 1.25 or newer, Wails v2, and GTK3/WebKitGTK 4.1 development libraries. Go and Wails are installed globally for the current account, outside this repository.
+
+On Arch Linux / CachyOS:
+
+```sh
+sudo pacman -S --needed base-devel pkgconf gtk3 webkit2gtk-4.1
+```
+
+```sh
+go install github.com/wailsapp/wails/v2/cmd/wails@v2.16.0
+# Ensure $(go env GOPATH)/bin is in PATH.
+npm ci
+npm run desktop:dev
+```
+
+Build the native Linux application:
+
+```sh
+npm run desktop:build
+./build/bin/wadahdb-studio
+```
+
+Build an AppImage with linuxdeploy and its GTK/AppImage plugins available (the local Tauri tool cache can be reused):
+
+```sh
+npm run desktop:appimage
+./build/appimage/wadahdb-studio_0.1.0_amd64.AppImage
+```
+
+Set `APPIMAGE_RUNTIME_FILE` to a downloaded x86_64 AppImage runtime for offline packaging. Set `LINUXDEPLOY` and `LINUXDEPLOY_DIR` if the tools are installed elsewhere. This script bundles GTK/WebKit dependencies. AppImages inherit the build host's glibc requirements; release artifacts must be built and tested on the supported distribution baseline. See [Wails Linux dependencies](https://wails.io/docs/gettingstarted/installation/) and [migration notes](docs/go-migration.md).
+
+Verify the backend:
+
+```sh
+go test -tags webkit2_41 ./...
+# Optional disposable database integration test:
+GUI_SQL_TEST_DSN='user:password@tcp(127.0.0.1:3306)/' go test -tags webkit2_41 -v ./...
+```
+
+## Backend architecture
+
+Go packages are organized by feature, with an engine registry and optional capabilities for future database adapters. MySQL and MariaDB are currently implemented. See [backend architecture](docs/backend-architecture.md) for module responsibilities and adding engines.
+
+## Product decisions
+
+- Linux desktop is first; AppImage is the first distribution format.
+- MySQL and MariaDB are explicit profile choices. Compatibility is being targeted at MySQL 8.0/8.4 and MariaDB 10.11/11.4/11.8.
+- Apache-2.0 license; see [LICENSE](LICENSE).
+- No app account, subscription, telemetry, or vendor-hosted database service is required.
+- Tailscale, Cloudflare Tunnel, and other system networking work through a reachable host and port; there are no dedicated VPN setup flows yet.
+- SSH tunnels use the system `ssh` client.
+
+## Backup format
+
+Backups are readable `.sql` files with a small wadahdb-studio manifest and statement markers. The native restore flow understands that format and can move a backup to another database. Keep an independent copy of important production backups and inspect the target before confirming an overwrite.
+
+## License
+
+Apache-2.0.

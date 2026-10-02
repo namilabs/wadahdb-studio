@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+set -e
+APPDIR="${APPDIR:-$(dirname "$(readlink -f "$0")")}"
+export APPDIR
+if [[ -f "$APPDIR/apprun-hooks/linuxdeploy-plugin-gtk.sh" ]]; then
+  source "$APPDIR/apprun-hooks/linuxdeploy-plugin-gtk.sh"
+fi
+export LD_LIBRARY_PATH="$APPDIR/usr/lib:$APPDIR/usr/lib64:${LD_LIBRARY_PATH:-}"
+export WEBKIT_EXEC_PATH="$APPDIR/usr/lib/webkit2gtk-4.1"
+export WEBKIT_INJECTED_BUNDLE_PATH="$WEBKIT_EXEC_PATH/injected-bundle"
+# The GTK deploy plugin rewrites /usr paths in WebKit to relative paths.
+cd "$APPDIR/usr"
+exec "$APPDIR/usr/bin/wadahdb-studio" "$@"

@@ -1,0 +1,13 @@
+node_modules/
+dist/
+/_rust/src-tauri/target/
+/_rust/.cargo/
+/_rust/.rustup/
+*.AppImage
+.env
+.DS_Store
+/wadahdb-studio
+/build/bin/
+/build/appimage/
+/wailsjs/
+_rust/
