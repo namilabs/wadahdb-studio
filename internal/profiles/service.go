@@ -31,14 +31,8 @@ func (s *Service) SaveProfile(in model.SaveProfileInput) (model.ConnectionProfil
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	p := in.Profile
-	if strings.TrimSpace(p.Name) == "" || strings.TrimSpace(p.Host) == "" || p.Port < 1 || p.Port > 65535 {
-		return p, errors.New("Valid name, host, port and engine are required")
-	}
-	if e := s.validate(p); e != nil {
+	if e := s.Validate(p); e != nil {
 		return p, e
-	}
-	if p.SSH != nil && (p.SSH.Host == "" || p.SSH.Username == "" || p.SSH.Port < 1 || p.SSH.Port > 65535 || strings.HasPrefix(p.SSH.Username, "-")) {
-		return p, errors.New("Invalid SSH settings")
 	}
 	if p.ID == "" {
 		b := make([]byte, 16)
@@ -125,4 +119,18 @@ func (s *Service) Resolve(id string, temporaryPassword *string) (model.Connectio
 		return p, password, nil
 	}
 	return model.ConnectionProfile{}, "", errors.New("Connection profile not found")
+}
+
+// Validate checks shared connection fields and delegates engine-specific requirements.
+func (s *Service) Validate(p model.ConnectionProfile) error {
+	if strings.TrimSpace(p.Name) == "" || strings.TrimSpace(p.Host) == "" || p.Port < 1 || p.Port > 65535 {
+		return errors.New("Valid name, host, port and engine are required")
+	}
+	if e := s.validate(p); e != nil {
+		return e
+	}
+	if p.SSH != nil && (p.SSH.Host == "" || p.SSH.Username == "" || p.SSH.Port < 1 || p.SSH.Port > 65535 || strings.HasPrefix(p.SSH.Username, "-")) {
+		return errors.New("Invalid SSH settings")
+	}
+	return nil
 }

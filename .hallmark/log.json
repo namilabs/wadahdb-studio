@@ -1,0 +1,12 @@
+[
+  {
+    "date": "2026-10-02",
+    "macrostructure": "Workbench",
+    "theme": "user reference: blue on light",
+    "nav": "side rail",
+    "footer": "workspace status",
+    "enrichment": "user-supplied logo and startup splash",
+    "brief": "Connections and SQL workspace redesign from two user screenshots",
+    "verification": "TypeScript, DOM interaction checks, Go race tests, go vet; browser visual checks unavailable in sandbox"
+  }
+]

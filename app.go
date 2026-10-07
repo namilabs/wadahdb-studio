@@ -205,3 +205,32 @@ func (a *App) ExportQuery(id, query, path, format string) (int, error) {
 	}
 	return c.ExportQuery(query, path, format)
 }
+
+// TestConnection opens a temporary connection without persisting the profile or
+// replacing an active workspace session.
+func (a *App) TestConnection(input SaveProfileInput) (string, error) {
+	p := input.Profile
+	if e := a.profiles.Validate(p); e != nil {
+		return "", e
+	}
+	password := ""
+	if input.Password != nil {
+		password = *input.Password
+	} else if p.HasSavedPassword {
+		_, saved, e := a.profiles.Resolve(p.ID, nil)
+		if e != nil {
+			return "", e
+		}
+		password = saved
+	}
+	d, e := a.registry.Driver(p.Engine)
+	if e != nil {
+		return "", e
+	}
+	c, e := d.Open(a.ctx, p, password)
+	if e != nil {
+		return "", e
+	}
+	version := c.Version()
+	return version, c.Close()
+}

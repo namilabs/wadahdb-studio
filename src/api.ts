@@ -1,6 +1,6 @@
 // Wails preserves the existing typed frontend contract.
 const methodNames: Record<string, string> = {
- list_engines:'ListEngines', list_profiles:'ListProfiles', save_profile:'SaveProfile', delete_profile:'DeleteProfile',
+ test_connection:'TestConnection', list_engines:'ListEngines', list_profiles:'ListProfiles', save_profile:'SaveProfile', delete_profile:'DeleteProfile',
  connect_profile:'ConnectProfile', disconnect_profile:'DisconnectProfile', execute_query:'ExecuteQuery',
  begin_transaction:'BeginTransaction', finish_transaction:'FinishTransaction', cancel_query:'CancelQuery',
  select_database:'SelectDatabase', list_databases:'ListDatabases', list_objects:'ListObjects',
@@ -87,6 +87,7 @@ export interface TablePage {
 }
 
 export const api = {
+  testConnection: (profile: ConnectionProfile, password: string | null) => invoke<string>('test_connection', { input: { profile, password, forgetPassword: false } }),
   engines: () => invoke<EngineDescriptor[]>('list_engines'),
   profiles: () => invoke<ConnectionProfile[]>('list_profiles'),
   saveProfile: (profile: ConnectionProfile, password: string, forgetPassword = false) =>
