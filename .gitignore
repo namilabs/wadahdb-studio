@@ -4,7 +4,20 @@ dist/
 /_rust/.cargo/
 /_rust/.rustup/
 *.AppImage
+# Local environment and credentials (sanitized examples may be committed).
 .env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Local logs and editor state.
+*.log
+.idea/
+.vscode/
+
 .DS_Store
 /wadahdb-studio
 /build/bin/

@@ -14,11 +14,22 @@ wadahdb-studio is a free, open-source Linux desktop client for MySQL and MariaDB
 - Restore inspection with object conflict detection and explicit overwrite confirmation.
 - CSV and SQL import, plus CSV and JSON export for query results and full tables.
 
-This is not a public release yet. The database-version compatibility matrix and cross-distribution AppImage behavior still need release validation. See [the MVP specification](docs/mvp-spec.md) for the target and remaining release checks.
+**Status: early pre-release.** The source is available for experimentation and contributions, but there is no stable release yet. Use a disposable database for evaluation; do not rely on the app as your only production backup tool. The database-version compatibility matrix and cross-distribution AppImage behavior still need release validation. See [the MVP specification](docs/mvp-spec.md) for the target and remaining release checks.
+
+## Getting started
+
+Clone the repository, then follow the development instructions below:
+
+```sh
+git clone https://github.com/namilabs/wadahdb-studio.git
+cd wadahdb-studio
+```
+
+The active application uses Go/Wails v2 and React/TypeScript. Linux is the supported development target; Windows and macOS support is not currently promised. A running MySQL or MariaDB server is needed to use the client. To save passwords, run a Linux Secret Service provider (such as GNOME Keyring or KDE Wallet); SSH tunneling also requires the system `ssh` command.
 
 ## Development
 
-Install Node.js, Go 1.25 or newer, Wails v2, and GTK3/WebKitGTK 4.1 development libraries. Go and Wails are installed globally for the current account, outside this repository.
+Install Node.js, Go 1.25 or newer, Wails v2, and GTK3/WebKitGTK 4.1 development libraries. Use Node.js 22 LTS or newer. Install Go and Wails outside this repository.
 
 On Arch Linux / CachyOS:
 
@@ -40,7 +51,7 @@ npm run desktop:build
 ./build/bin/wadahdb-studio
 ```
 
-Build an AppImage with linuxdeploy and its GTK/AppImage plugins available (the local Tauri tool cache can be reused):
+Build an AppImage with linuxdeploy and its GTK/AppImage plugins available:
 
 ```sh
 npm run desktop:appimage
@@ -74,6 +85,18 @@ Go packages are organized by feature, with an engine registry and optional capab
 
 Backups are readable `.sql` files with a small wadahdb-studio manifest and statement markers. The native restore flow understands that format and can move a backup to another database. Keep an independent copy of important production backups and inspect the target before confirming an overwrite.
 
+## Contributing and support
+
+Bug reports, documentation improvements, tests, and focused pull requests are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) for setup, validation, and contribution expectations, and [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) for community standards.
+
+Use [GitHub Issues](https://github.com/namilabs/wadahdb-studio/issues) for reproducible bugs and feature requests. Remove credentials, connection details, real database contents, and sensitive SQL from reports. For vulnerabilities, follow [SECURITY.md](SECURITY.md) instead of opening a public issue. This is a community project, with no guaranteed support or response times.
+
+## AI-assisted development
+
+This project is developed with the help of AI coding tools, including assistance with code, documentation, and design. AI assistance is disclosed openly; it is not a guarantee of correctness or security. Maintainers remain responsible for reviewing changes, and contributors must understand and validate everything they submit. AI-assisted contributions are welcome under the same standards as any other contribution.
+
+Never submit passwords, private keys, production data, or confidential SQL to AI services while working on this project.
+
 ## License
 
-Apache-2.0.
+Licensed under [Apache-2.0](LICENSE). Third-party dependencies retain their own licenses. The software is provided without warranty; review and test it before using it with important data.

@@ -1,6 +1,19 @@
 {
   "name": "wadahdb-studio",
   "private": true,
+    "description": "An open-source Linux desktop client for MySQL and MariaDB",
+    "license": "Apache-2.0",
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/namilabs/wadahdb-studio.git"
+    },
+    "bugs": {
+      "url": "https://github.com/namilabs/wadahdb-studio/issues"
+    },
+    "homepage": "https://github.com/namilabs/wadahdb-studio#readme",
+    "engines": {
+      "node": ">=22"
+    },
   "version": "0.1.0",
   "type": "module",
   "scripts": {
