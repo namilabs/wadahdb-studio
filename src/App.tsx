@@ -40,6 +40,9 @@ const newTab = (index: number): Tab => ({
 })
 
 function quoteIdentifier(value: string) { return `\`${value.replaceAll('`', '``')}\`` }
+function engineLabel(engine: ConnectionProfile['engine']) {
+  return engine === 'mysql' ? 'MySQL' : engine === 'mariadb' ? 'MariaDB' : 'SQLite'
+}
 
 function BackupDialog({ profile, databases, onClose, onDone }: {
   profile: ConnectionProfile
@@ -316,15 +319,18 @@ export default function App() {
     setError('')
     setMessage('')
     try {
-      const temporaryPassword = suppliedPassword !== undefined ? suppliedPassword : profile.hasSavedPassword ? null : window.prompt(`Password for ${profile.username}@${profile.host}`)
+      const temporaryPassword = profile.engine === 'sqlite'
+        ? ''
+        : suppliedPassword !== undefined ? suppliedPassword : profile.hasSavedPassword ? null : window.prompt(`Password for ${profile.username}@${profile.host}`)
       if (temporaryPassword === null && !profile.hasSavedPassword) return
       const version = await api.connect(profile.id, temporaryPassword)
+      const nextDatabases = await api.databases(profile.id)
       setConnectedId(profile.id)
       setTransaction(false)
       setServerVersion(version)
-      setDatabases(await api.databases(profile.id))
+      setDatabases(nextDatabases)
       setExpandedDb(null)
-      setSelectedDatabase(profile.defaultDatabase)
+      setSelectedDatabase(profile.defaultDatabase ?? nextDatabases[0]?.name ?? null)
       setObjects([])
       setSelectedObject(null)
       setObjectColumns([])
@@ -614,11 +620,11 @@ export default function App() {
             })}{objects.length === 0 && <p className="empty-side">No objects in this database.</p>}</div>}
           </div>)}</div>
           <button className="secondary explorer-new-query" onClick={() => addTab('')}><Plus size={18} /> New query</button>
-          {activeProfile && <div className="explorer-footer"><span>{activeProfile.engine === 'mysql' ? 'MySQL' : 'MariaDB'} · {serverVersion}</span><button className="icon-button" aria-label="Disconnect" title="Disconnect" onClick={() => void disconnect()}><Unplug size={16} /></button></div>}
+          {activeProfile && <div className="explorer-footer"><span>{engineLabel(activeProfile.engine)} · {serverVersion}</span><button className="icon-button" aria-label="Disconnect" title="Disconnect" onClick={() => void disconnect()}><Unplug size={16} /></button></div>}
         </aside>
         <div className="query-workspace">
       <div className="editor-tabs">{tabs.map(tab => <div className={`editor-tab ${tab.id === activeTab.id ? 'active' : ''}`} key={tab.id}><button onClick={() => setActiveTabId(tab.id)}><FileCode2 size={15} />{tab.title}</button><button className="tab-close" onClick={() => closeTab(tab.id)} aria-label={`Close ${tab.title}`}><X size={13} /></button></div>)}<button className="new-tab" title="New query tab" onClick={() => addTab('')}><Plus size={16} /></button></div>
-      <div className="query-toolbar"><div className="query-actions"><button className="primary run-button" onClick={() => void run()} disabled={busy || !connectedId}>{busy ? <LoaderCircle size={15} className="spin" /> : <Play size={15} fill="currentColor" />} Run</button><button className="secondary" disabled={!connectedId || busy} onClick={() => void run(false, `EXPLAIN ${activeTab.sql.trim().replace(/;$/, '')}`)}><Clock3 size={15} /> Explain</button><button className="icon-button" onClick={saveQuery} title="Save snippet" aria-label="Save snippet"><Save size={17} /></button>{busy && <button className="secondary cancel-button" onClick={() => connectedId && api.cancelQuery(connectedId).catch(cause => setError(errorMessage(cause)))}><Square size={12} fill="currentColor" /> Cancel</button>}</div><div className="toolbar-right">{transaction ? <><button className="ghost-action" onClick={() => void changeTransaction(true)}>Commit</button><button className="ghost-action" onClick={() => void changeTransaction(false)}>Rollback</button></> : <button className="ghost-action" disabled={!connectedId || busy} onClick={() => void changeTransaction()}>Begin tx</button>}<span className="query-engine"><DatabaseIcon engine={activeProfile?.engine ?? 'mysql'} size={16} />{activeProfile ? activeProfile.engine === 'mysql' ? 'MySQL' : 'MariaDB' : 'SQL'}{selectedDatabase && <small> / {selectedDatabase}</small>}</span><button className="icon-button" aria-label={showDetails ? 'Hide table information' : 'Show table information'} title="Toggle table information" onClick={() => setShowDetails(!showDetails)}>{showDetails ? <PanelRightClose size={17} /> : <PanelRightOpen size={17} />}</button></div></div>
+      <div className="query-toolbar"><div className="query-actions"><button className="primary run-button" onClick={() => void run()} disabled={busy || !connectedId}>{busy ? <LoaderCircle size={15} className="spin" /> : <Play size={15} fill="currentColor" />} Run</button><button className="secondary" disabled={!connectedId || busy} onClick={() => void run(false, `EXPLAIN ${activeTab.sql.trim().replace(/;$/, '')}`)}><Clock3 size={15} /> Explain</button><button className="icon-button" onClick={saveQuery} title="Save snippet" aria-label="Save snippet"><Save size={17} /></button>{busy && <button className="secondary cancel-button" onClick={() => connectedId && api.cancelQuery(connectedId).catch(cause => setError(errorMessage(cause)))}><Square size={12} fill="currentColor" /> Cancel</button>}</div><div className="toolbar-right">{transaction ? <><button className="ghost-action" onClick={() => void changeTransaction(true)}>Commit</button><button className="ghost-action" onClick={() => void changeTransaction(false)}>Rollback</button></> : <button className="ghost-action" disabled={!connectedId || busy} onClick={() => void changeTransaction()}>Begin tx</button>}<span className="query-engine"><DatabaseIcon engine={activeProfile?.engine ?? 'mysql'} size={16} />{activeProfile ? engineLabel(activeProfile.engine) : 'SQL'}{selectedDatabase && <small> / {selectedDatabase}</small>}</span><button className="icon-button" aria-label={showDetails ? 'Hide table information' : 'Show table information'} title="Toggle table information" onClick={() => setShowDetails(!showDetails)}>{showDetails ? <PanelRightClose size={17} /> : <PanelRightOpen size={17} />}</button></div></div>
       <div className="editor-area"><Editor height="100%" language="sql" theme={resolvedTheme === 'dark' ? 'vs-dark' : 'light'} value={activeTab.sql} onChange={value => updateSql(value ?? '')} onMount={onEditorMount} options={{ minimap: { enabled: false }, fontSize, lineHeight: 23, padding: { top: 20 }, scrollBeyondLastLine: false, automaticLayout: true, wordWrap: wordWrap ? 'on' : 'off', fontFamily: 'ui-monospace, SFMono-Regular, Consolas, monospace' }} /></div>
       <section className="results">
         <div className="results-header">

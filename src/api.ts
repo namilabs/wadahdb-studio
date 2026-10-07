@@ -30,7 +30,7 @@ export interface EngineDescriptor {
   }
 }
 
-export type Engine = 'mysql' | 'mariadb'
+export type Engine = 'mysql' | 'mariadb' | 'sqlite'
 
 export interface SshConfig {
   host: string
@@ -43,6 +43,7 @@ export interface ConnectionProfile {
   id: string
   name: string
   engine: Engine
+  databasePath: string | null
   host: string
   port: number
   username: string

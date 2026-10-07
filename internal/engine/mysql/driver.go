@@ -22,8 +22,8 @@ func (d *Driver) Descriptor() engine.Descriptor {
 		Capabilities: engine.Capabilities{SQL: true, Transactions: true, Schema: true, Tables: true, Backup: true, Transfer: true}}
 }
 func (d *Driver) ValidateProfile(p model.ConnectionProfile) error {
-	if (d.id != "mysql" && d.id != "mariadb") || p.Engine != d.id || strings.TrimSpace(p.Username) == "" {
-		return errors.New("Valid MySQL/MariaDB engine and username are required")
+	if (d.id != "mysql" && d.id != "mariadb") || p.Engine != d.id || strings.TrimSpace(p.Host) == "" || p.Port < 1 || p.Port > 65535 || strings.TrimSpace(p.Username) == "" {
+		return errors.New("Valid MySQL/MariaDB engine, host, port and username are required")
 	}
 	return nil
 }

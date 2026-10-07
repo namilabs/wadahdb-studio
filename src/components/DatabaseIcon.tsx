@@ -4,7 +4,7 @@ export const databaseTypes = [
   { id: 'postgres', name: 'PostgreSQL', port: 5432, available: false },
   { id: 'mysql', name: 'MySQL', port: 3306, available: true },
   { id: 'mariadb', name: 'MariaDB', port: 3306, available: true },
-  { id: 'sqlite', name: 'SQLite', port: 0, available: false },
+  { id: 'sqlite', name: 'SQLite', port: 0, available: true },
   { id: 'sqlserver', name: 'SQL Server', port: 1433, available: false },
   { id: 'redis', name: 'Redis', port: 6379, available: false },
   { id: 'mongodb', name: 'MongoDB', port: 27017, available: false },

@@ -104,3 +104,22 @@ func TestMissingSavedPassword(t *testing.T) {
 		t.Fatal(secret, e)
 	}
 }
+
+func TestSqliteProfileValidationAndPersistence(t *testing.T) {
+	repo := JSONRepository{Path: filepath.Join(t.TempDir(), "profiles.json")}
+	dbPath := filepath.Join(t.TempDir(), "sample.db")
+	s := New(repo, memorySecrets{}, func(p model.ConnectionProfile) error {
+		if p.Engine != "sqlite" || p.DatabasePath == nil || *p.DatabasePath == "" {
+			return errors.New("invalid sqlite profile")
+		}
+		return nil
+	})
+	p := model.ConnectionProfile{Name: "local", Engine: "sqlite", DatabasePath: &dbPath}
+	saved, e := s.SaveProfile(model.SaveProfileInput{Profile: p})
+	if e != nil {
+		t.Fatal(e)
+	}
+	if saved.DatabasePath == nil || *saved.DatabasePath != dbPath || saved.Host != "" || saved.Port != 0 || saved.Username != "" {
+		t.Fatal(saved)
+	}
+}

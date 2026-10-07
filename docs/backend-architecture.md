@@ -1,6 +1,6 @@
 # Backend architecture
 
-The backend is a modular monolith: one desktop executable, with packages owning specific behavior. MySQL and MariaDB are the implemented engines. PostgreSQL, Redis, Elasticsearch, and MongoDB are future adapters, not currently usable connections.
+The backend is a modular monolith: one desktop executable, with packages owning specific behavior. MySQL, MariaDB, and SQLite are implemented engines. PostgreSQL, Redis, Elasticsearch, and MongoDB are future adapters, not currently usable connections.
 
 ```text
 React → src/api.ts → App (Wails interface)
@@ -19,6 +19,7 @@ React → src/api.ts → App (Wails interface)
 | `internal/engine` | Driver registry, engine metadata, connection and feature contracts |
 | `internal/database` | Session routing by profile ID, replacement, disconnect, shutdown |
 | `internal/engine/mysql` | MySQL/MariaDB protocol, TLS/SSH, query execution, schema, transactions, table editing, backup, import/export |
+| `internal/engine/sqlite` | SQLite file-backed query execution, schema browsing, transactions, and table editing |
 | `internal/profiles` | Validation orchestration, JSON repository, keyring adapter, credential resolution |
 | `internal/sqlsyntax` | MySQL/MariaDB statement splitting, identifier quoting, safety checks, schema relocation |
 | `internal/backup` | Reading legacy v1 MySQL/MariaDB backup files |
@@ -34,7 +35,7 @@ SQL execution and snapshot/restore logic stay in the MySQL adapter because their
 3. Return a connection implementing only `Version()` and `Close()` as the mandatory contract. Each opened connection owns its resources; a failed open must release partial resources. Close must terminate work and release clients, connections, and tunnels.
 4. Implement applicable optional feature interfaces. SQL adapters can use query, schema, table, transaction, backup, and transfer contracts. Key/value, document, and search adapters can introduce small feature interfaces and corresponding desktop methods when their UI is implemented. They do not need SQL or `database/sql`.
 5. Advertise only implemented capabilities. `ListEngines()` and `api.engines()` expose metadata; desktop methods check the actual feature contract and return `engine.ErrUnsupported` for unsupported operations.
-6. Add adapter tests and extend the frontend profile types, connection options, and workbench views. The current UI still offers MySQL/MariaDB. Add URI, authentication, or engine-specific profile fields only when an adapter needs them, preserving old JSON compatibility.
+6. Add adapter tests and extend the frontend profile types, connection options, and workbench views. The current UI offers MySQL/MariaDB and SQLite. Add URI, authentication, or engine-specific profile fields only when an adapter needs them, preserving old JSON compatibility.
 
 The manager serializes connection replacement and shutdown. Different profile IDs remain independently routed, including across engine families. Adapter operations own execution synchronization; MySQL preserves its pinned editor connection and transaction state. Separate pool connections continue to serve metadata, backup snapshots, import, and restore.
 
