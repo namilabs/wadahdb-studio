@@ -11,7 +11,7 @@ Thanks for helping improve wadahdb-studio. This is an early pre-release Linux My
 
 ## Development
 
-Fork and clone the repository, then follow the prerequisites and setup in [README.md](README.md). Use Node.js 22 or newer, Go 1.25 or newer, Wails v2.16.0, and GTK3/WebKitGTK 4.1 development libraries.
+Fork and clone the repository, then follow the prerequisites and setup in [README.md](README.md). Use Node.js 22.13 or newer, Go 1.25 or newer, Wails v2.16.0, and GTK3/WebKitGTK 4.1 development libraries.
 
 ```sh
 npm ci
@@ -32,8 +32,10 @@ The frontend-only Vite server (`npm run dev`) does not provide the native backen
 ## Validation
 
 ```sh
+npm run lint
+npm run typecheck
 npm run build
-go test -tags webkit2_41 ./...
+go test -race -count=1 -tags webkit2_41 ./...
 go vet -tags webkit2_41 ./...
 npm run desktop:build
 ```
@@ -41,6 +43,16 @@ npm run desktop:build
 For UI changes, check the native app and include screenshots where useful. State which commands you ran and which checks you could not perform.
 
 The optional live integration test uses `GUI_SQL_TEST_DSN` and creates/drops databases. Use only a disposable server and a dedicated test account. Without that variable, the test skips. Never run it against production.
+
+## Forks and pull request checks
+
+Create a branch in your fork and open a pull request against this repository's `main` branch. CI runs on pull requests from both repository branches and forks. First-time contributors may need a maintainer to approve the workflow run, depending on GitHub repository settings.
+
+The required checks cover ESLint, TypeScript, frontend bundling, Go formatting, `go vet`, Go tests with race detection, packaging-script syntax, and the Linux desktop build. Live database tests remain opt-in and are not run against a production server in PR CI.
+
+Fork PRs use the `pull_request` event, a read-only token, and checkout without persisted credentials. CI does not require repository secrets or use `pull_request_target`. Do not add privileged workflows that execute code from a fork.
+
+Maintainers should enable GitHub Actions for the repository and select **PR checks** as a required status check in the branch ruleset for `main`. Keep approval requirements for external contributors enabled; review workflow changes before approving runs. The workflow also supports merge queues. These repository settings must be configured on GitHub, not in this file.
 
 ## Submitting a pull request
 

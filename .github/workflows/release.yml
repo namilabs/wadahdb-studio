@@ -1,0 +1,241 @@
+name: Release
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (for example 0.1.0-alpha.1); no version commit needed'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.event.release.tag_name || inputs.version }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build ${{ matrix.platform }} (unsigned experimental)
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-22.04
+            platform: linux-amd64
+            target: linux/amd64
+          # Native runners, not cross-compilation.
+          - runner: macos-15
+            platform: macos-arm64
+            target: darwin/arm64
+          - runner: macos-15-intel
+            platform: macos-amd64
+            target: darwin/amd64
+          - runner: windows-2022
+            platform: windows-amd64
+            target: windows/amd64
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Checkout release tag or selected workflow commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.release.tag_name || github.sha }}
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Validate release version
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name || inputs.version }}
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs'
+          const tag = process.env.RELEASE_TAG
+          const version = tag.replace(/^v/, '')
+          const semver = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-(?:0|[1-9]\d*|\d*[A-Za-z-][0-9A-Za-z-]*)(?:\.(?:0|[1-9]\d*|\d*[A-Za-z-][0-9A-Za-z-]*))*)?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$/
+          if (!semver.test(version)) {
+            throw new Error(`Invalid release version: ${tag}`)
+          }
+          fs.appendFileSync(process.env.GITHUB_ENV, `VERSION=${version}\n`)
+          NODE
+          test -f docs/releases.md
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Install Linux desktop dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential pkg-config libgtk-3-dev libwebkit2gtk-4.1-dev librsvg2-dev patchelf
+
+      - run: npm ci
+      - name: Set version in CI workspace only
+        run: npm version "$VERSION" --no-git-tag-version --allow-same-version --ignore-scripts
+      - run: npm run lint
+      - run: npm run typecheck
+
+      - name: Prepare native packaging metadata
+        run: |
+          cp build/icons/wadahdb-studio.png build/appicon.png
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs'
+          const config = JSON.parse(fs.readFileSync('wails.json', 'utf8'))
+          config.info = {
+            ...config.info,
+            companyName: 'wadahdb-studio contributors',
+            productName: 'wadahdb-studio',
+            // Native version resources require a numeric version.
+            productVersion: process.env.VERSION.split(/[+-]/)[0],
+            comments: 'Open-source MySQL/MariaDB desktop client',
+          }
+          fs.writeFileSync('wails.json', JSON.stringify(config, null, 2) + '\n')
+          NODE
+
+      - name: Install Wails v2.16.0
+        run: go install github.com/wailsapp/wails/v2/cmd/wails@v2.16.0
+
+      - name: Download Linux AppImage tools
+        if: runner.os == 'Linux'
+        run: |
+          deploy_dir="$RUNNER_TEMP/linuxdeploy"
+          mkdir -p "$deploy_dir"
+          curl --fail --location --retry 3 https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage -o "$deploy_dir/linuxdeploy-x86_64.AppImage"
+          curl --fail --location --retry 3 https://raw.githubusercontent.com/linuxdeploy/linuxdeploy-plugin-gtk/master/linuxdeploy-plugin-gtk.sh -o "$deploy_dir/linuxdeploy-plugin-gtk.sh"
+          curl --fail --location --retry 3 https://github.com/linuxdeploy/linuxdeploy-plugin-appimage/releases/download/continuous/linuxdeploy-plugin-appimage-x86_64.AppImage -o "$deploy_dir/linuxdeploy-plugin-appimage-x86_64.AppImage"
+          chmod +x "$deploy_dir/"*
+          # The plugin can download its runtime; provide a local one when available.
+          if curl --fail --location --retry 3 https://github.com/AppImage/type2-runtime/releases/download/continuous/runtime-x86_64 -o "$deploy_dir/runtime-x86_64"; then
+            echo "APPIMAGE_RUNTIME_FILE=$deploy_dir/runtime-x86_64" >> "$GITHUB_ENV"
+          else
+            rm -f "$deploy_dir/runtime-x86_64"
+            echo '::warning::Runtime download failed; the AppImage plugin will fetch its runtime.'
+          fi
+          echo "LINUXDEPLOY_DIR=$deploy_dir" >> "$GITHUB_ENV"
+          echo "LINUXDEPLOY=$deploy_dir/linuxdeploy-x86_64.AppImage" >> "$GITHUB_ENV"
+
+      - name: Build Linux AppImage
+        if: runner.os == 'Linux'
+        env:
+          APPIMAGE_EXTRACT_AND_RUN: '1'
+          DEPLOY_GTK_VERSION: '3'
+        run: |
+          bash scripts/appimage.sh
+          mkdir -p release-assets
+          cp "build/appimage/wadahdb-studio_${VERSION}_amd64.AppImage" "release-assets/wadahdb-studio_${VERSION}_linux-amd64.AppImage"
+
+      - name: Build native macOS or Windows application
+        if: runner.os != 'Linux'
+        env:
+          BUILD_TARGET: ${{ matrix.target }}
+        run: wails build -platform "$BUILD_TARGET"
+
+      - name: Package macOS application (preserve symlinks)
+        if: runner.os == 'macOS'
+        env:
+          PLATFORM: ${{ matrix.platform }}
+        run: |
+          mkdir -p release-assets "$RUNNER_TEMP/package/docs"
+          cp -R build/bin/wadahdb-studio.app "$RUNNER_TEMP/package/"
+          cp README.md LICENSE "$RUNNER_TEMP/package/"
+          cp docs/releases.md "$RUNNER_TEMP/package/docs/"
+          tar -czf "release-assets/wadahdb-studio_${VERSION}_${PLATFORM}.tar.gz" -C "$RUNNER_TEMP/package" wadahdb-studio.app README.md LICENSE docs
+
+      - name: Package Windows application
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $package = Join-Path $env:RUNNER_TEMP 'package'
+          New-Item -ItemType Directory -Force "$package/docs", 'release-assets' | Out-Null
+          Copy-Item 'build/bin/wadahdb-studio.exe', 'README.md', 'LICENSE' -Destination $package
+          Copy-Item 'docs/releases.md' -Destination "$package/docs/"
+          @'
+          # Windows runtime requirement
+
+          Install the Microsoft Edge WebView2 Evergreen Runtime if it is not already installed:
+          https://developer.microsoft.com/en-us/microsoft-edge/webview2/#download-section
+
+          This is an unsigned experimental build. See docs/releases.md for release caveats.
+          '@ | Set-Content -Path "$package/WEBVIEW2.md" -Encoding utf8
+          Compress-Archive -Path "$package/*" -DestinationPath "release-assets/wadahdb-studio_$($env:VERSION)_windows-amd64.zip"
+
+      - name: Upload packaged artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-${{ matrix.platform }}
+          path: release-assets/*
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 0
+
+  publish:
+    name: Publish release assets and checksums
+    needs: build
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+    permissions:
+      actions: read
+      contents: write
+    steps:
+      # No checkout or application build code runs with the write token.
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: release-*
+          merge-multiple: true
+          path: release-assets
+
+      - name: Generate SHA256SUMS and upload to the existing release
+        shell: bash
+        working-directory: release-assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ github.event.release.tag_name || inputs.version }}
+          EVENT_NAME: ${{ github.event_name }}
+          SOURCE_SHA: ${{ github.sha }}
+        run: |
+          if [ "$EVENT_NAME" = workflow_dispatch ]; then
+            version="${RELEASE_TAG#v}"
+            RELEASE_TAG="v$version"
+            # Do not accidentally attach a new build to an existing tag's code.
+            if gh api "repos/$GH_REPO/git/ref/tags/$RELEASE_TAG" > /dev/null 2> tag-error; then
+              echo "Tag $RELEASE_TAG already exists. Choose a new version or rerun its original release workflow." >&2
+              exit 1
+            elif ! grep -q 'HTTP 404' tag-error; then
+              cat tag-error >&2
+              exit 1
+            fi
+          fi
+          shopt -s nullglob
+          assets=( *.AppImage *.tar.gz *.zip )
+          if [ "${#assets[@]}" -ne 4 ]; then
+            echo 'Expected exactly four platform packages.' >&2
+            exit 1
+          fi
+          LC_ALL=C sha256sum "${assets[@]}" > SHA256SUMS
+          sha256sum --check SHA256SUMS
+          if [ "$EVENT_NAME" = workflow_dispatch ]; then
+            prerelease=()
+            if [[ "$version" == *-* ]]; then
+              prerelease=(--prerelease)
+            fi
+            # Publish only after builds succeed; GitHub creates the tag at this SHA.
+            gh release create "$RELEASE_TAG" --target "$SOURCE_SHA" --title "$RELEASE_TAG" --generate-notes "${prerelease[@]}" "${assets[@]}" SHA256SUMS
+          else
+            gh release upload "$RELEASE_TAG" "${assets[@]}" SHA256SUMS --clobber
+          fi

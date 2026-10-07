@@ -25,11 +25,11 @@ git clone https://github.com/namilabs/wadahdb-studio.git
 cd wadahdb-studio
 ```
 
-The active application uses Go/Wails v2 and React/TypeScript. Linux is the supported development target; Windows and macOS support is not currently promised. A running MySQL or MariaDB server is needed to use the client. To save passwords, run a Linux Secret Service provider (such as GNOME Keyring or KDE Wallet); SSH tunneling also requires the system `ssh` command.
+The active application uses Go/Wails v2 and React/TypeScript. Linux is the primary development target. Release automation also builds experimental macOS and Windows packages; their native workflows still need validation. A running MySQL or MariaDB server is needed to use the client. To save passwords, run a Linux Secret Service provider (such as GNOME Keyring or KDE Wallet); SSH tunneling also requires the system `ssh` command.
 
 ## Development
 
-Install Node.js, Go 1.25 or newer, Wails v2, and GTK3/WebKitGTK 4.1 development libraries. Use Node.js 22 LTS or newer. Install Go and Wails outside this repository.
+Install Node.js, Go 1.25 or newer, Wails v2, and GTK3/WebKitGTK 4.1 development libraries. Use Node.js 22.13 or newer. Install Go and Wails outside this repository.
 
 On Arch Linux / CachyOS:
 
@@ -67,6 +67,12 @@ go test -tags webkit2_41 ./...
 # Optional disposable database integration test:
 GUI_SQL_TEST_DSN='user:password@tcp(127.0.0.1:3306)/' go test -tags webkit2_41 -v ./...
 ```
+
+## Release packages
+
+Run **Actions → Release → Run workflow** with a version to build and publish through CI/CD without a version-bump commit or pre-created tag. Publishing an existing GitHub release also triggers native builds. Packages include Linux x86_64 AppImage, macOS Apple Silicon/Intel `.tar.gz` bundles, Windows x86_64 portable ZIP, and `SHA256SUMS`. macOS and Windows builds are experimental and unsigned; macOS builds are not notarized. See [release instructions and platform requirements](docs/releases.md).
+
+The package version is currently `0.1.0`; the recommended first public milestone is `0.1.0-alpha.1`, not beta or RC, until compatibility and native release checks are complete. Release builds use the version from the tag or workflow input; CI applies it only in its build workspace, without committing package changes.
 
 ## Backend architecture
 

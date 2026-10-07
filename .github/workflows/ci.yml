@@ -4,16 +4,77 @@ on:
   push:
     branches: [main]
   pull_request:
+  merge_group:
+  workflow_dispatch:
 
+# Fork PRs run untrusted code without secrets or write permissions.
 permissions:
   contents: read
 
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  validate:
+  frontend:
+    name: Frontend lint and build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm run build
+
+  backend:
+    name: Go lint and tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Install Linux desktop dependencies
+        run: sudo apt-get update && sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev pkg-config
+      # main.go embeds dist/, which is deliberately not tracked.
+      - run: npm ci
+      - run: npm run build
+      - name: Check Go formatting
+        shell: bash
+        run: |
+          unformatted=$(gofmt -l app.go app_test.go dialogs.go main.go model.go internal)
+          if [ -n "$unformatted" ]; then
+            printf 'Run gofmt on these files:\n%s\n' "$unformatted"
+            exit 1
+          fi
+      - run: go vet -tags webkit2_41 ./...
+      - run: go test -race -count=1 -tags webkit2_41 ./...
+      - name: Check packaging script syntax
+        run: bash -n scripts/appimage.sh scripts/AppRun
+
+  desktop:
+    name: Linux desktop build
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
@@ -25,11 +86,23 @@ jobs:
       - name: Install Linux desktop dependencies
         run: sudo apt-get update && sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev pkg-config
       - run: npm ci
-      - run: npm run build
-      - name: Check Go formatting
-        run: test -z "$(gofmt -l app.go app_test.go dialogs.go main.go model.go internal)"
-      - run: go test -tags webkit2_41 ./...
-      - run: go vet -tags webkit2_41 ./...
       - name: Install Wails
         run: go install github.com/wailsapp/wails/v2/cmd/wails@v2.16.0
       - run: npm run desktop:build
+
+  required:
+    name: PR checks
+    if: ${{ always() }}
+    needs: [frontend, backend, desktop]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 1
+    steps:
+      - name: Require every check to pass
+        env:
+          FRONTEND_RESULT: ${{ needs.frontend.result }}
+          BACKEND_RESULT: ${{ needs.backend.result }}
+          DESKTOP_RESULT: ${{ needs.desktop.result }}
+        run: |
+          test "$FRONTEND_RESULT" = success
+          test "$BACKEND_RESULT" = success
+          test "$DESKTOP_RESULT" = success
