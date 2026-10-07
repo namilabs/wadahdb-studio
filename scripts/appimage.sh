@@ -19,7 +19,8 @@ mkdir -p build/appimage/wadahdb-studio.AppDir/usr/bin build/appimage/wadahdb-stu
 cp build/bin/wadahdb-studio build/appimage/wadahdb-studio.AppDir/usr/bin/
 mkdir -p build/appimage/wadahdb-studio.AppDir/usr/share/doc/wadahdb-studio
 cp LICENSE README.md build/appimage/wadahdb-studio.AppDir/usr/share/doc/wadahdb-studio/
-cp build/icons/wadahdb-studio.png build/appimage/wadahdb-studio.AppDir/usr/share/icons/hicolor/256x256/apps/
+# linuxdeploy requires a standard icon size; keep the high-resolution source separate.
+cp build/icons/wadahdb-studio-256.png build/appimage/wadahdb-studio.AppDir/usr/share/icons/hicolor/256x256/apps/wadahdb-studio.png
 cat > build/appimage/wadahdb-studio.desktop <<'DESKTOP'
 [Desktop Entry]
 Name=wadahdb-studio
@@ -42,4 +43,4 @@ export OUTPUT="wadahdb-studio_${VERSION}_amd64.AppImage"
 export NO_STRIP=1
 # Supply a downloaded runtime for offline/restricted-network packaging.
 if [[ -n "${APPIMAGE_RUNTIME_FILE:-}" ]]; then export LDAI_RUNTIME_FILE="$APPIMAGE_RUNTIME_FILE"; fi
-"$DEPLOY" --appdir wadahdb-studio.AppDir --executable ../bin/wadahdb-studio --desktop-file wadahdb-studio.desktop --icon-file ../icons/wadahdb-studio.png --custom-apprun ../../scripts/AppRun --plugin gtk --output appimage
+"$DEPLOY" --appdir wadahdb-studio.AppDir --executable ../bin/wadahdb-studio --desktop-file wadahdb-studio.desktop --icon-file wadahdb-studio.AppDir/usr/share/icons/hicolor/256x256/apps/wadahdb-studio.png --custom-apprun ../../scripts/AppRun --plugin gtk --output appimage
