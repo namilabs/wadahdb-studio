@@ -1,5 +1,5 @@
 # wadahdb-studio
-
+ 
 wadahdb-studio is a free, open-source Linux desktop client for MySQL, MariaDB, and SQLite. The project is an early pre-release implementation for solo developers and solo DevOps practitioners who want a capable SQL workbench without a subscription.
 
 ## Current features
