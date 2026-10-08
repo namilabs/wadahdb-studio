@@ -1,10 +1,11 @@
 # wadahdb-studio
-
-wadahdb-studio is a free, open-source Linux desktop client for MySQL and MariaDB. The project is an early pre-release implementation for solo developers and solo DevOps practitioners who want a capable SQL workbench without a subscription.
+ 
+wadahdb-studio is a free, open-source Linux desktop client for MySQL, MariaDB, and SQLite. The project is an early pre-release implementation for solo developers and solo DevOps practitioners who want a capable SQL workbench without a subscription.
 
 ## Current features
 
 - MySQL or MariaDB connection profiles over TCP, TLS, or an SSH tunnel.
+- SQLite connection profiles using a local database file path.
 - Optional password storage in the Linux Secret Service keyring.
 - Multi-tab SQL editor with schema-aware completion, query history, saved queries, cancellation, EXPLAIN, and transaction controls.
 - Schema browser for databases, tables, views, routines, triggers, and indexes.
@@ -25,7 +26,7 @@ git clone https://github.com/namilabs/wadahdb-studio.git
 cd wadahdb-studio
 ```
 
-The active application uses Go/Wails v2 and React/TypeScript. Linux is the primary development target. Release automation also builds experimental macOS and Windows packages; their native workflows still need validation. A running MySQL or MariaDB server is needed to use the client. To save passwords, run a Linux Secret Service provider (such as GNOME Keyring or KDE Wallet); SSH tunneling also requires the system `ssh` command.
+The active application uses Go/Wails v2 and React/TypeScript. Linux is the primary development target. Release automation also builds experimental macOS and Windows packages; their native workflows still need validation. MySQL and MariaDB connections require a running server; SQLite uses local database files. To save passwords, run a Linux Secret Service provider (such as GNOME Keyring or KDE Wallet); SSH tunneling also requires the system `ssh` command.
 
 ## Development
 
@@ -76,7 +77,7 @@ The package version is currently `0.1.0`; the recommended first public milestone
 
 ## Backend architecture
 
-Go packages are organized by feature, with an engine registry and optional capabilities for future database adapters. MySQL and MariaDB are currently implemented. See [backend architecture](docs/backend-architecture.md) for module responsibilities and adding engines.
+Go packages are organized by feature, with an engine registry and optional capabilities for future database adapters. MySQL, MariaDB, and SQLite are currently implemented. See [backend architecture](docs/backend-architecture.md) for module responsibilities and adding engines.
 
 ## Product decisions
 

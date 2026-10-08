@@ -10,6 +10,7 @@ type ConnectionProfile struct {
 	ID               string     `json:"id"`
 	Name             string     `json:"name"`
 	Engine           string     `json:"engine"`
+	DatabasePath     *string    `json:"databasePath"`
 	Host             string     `json:"host"`
 	Port             int        `json:"port"`
 	Username         string     `json:"username"`

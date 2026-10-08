@@ -7,6 +7,7 @@ import (
 	"wadahdb-studio/internal/database"
 	"wadahdb-studio/internal/engine"
 	mysqlengine "wadahdb-studio/internal/engine/mysql"
+	sqliteengine "wadahdb-studio/internal/engine/sqlite"
 	"wadahdb-studio/internal/profiles"
 	"wadahdb-studio/internal/transfer"
 )
@@ -25,6 +26,9 @@ func NewApp() *App {
 		if e := registry.Register(mysqlengine.NewDriver(id)); e != nil {
 			panic(e)
 		}
+	}
+	if e := registry.Register(sqliteengine.NewDriver()); e != nil {
+		panic(e)
 	}
 	return &App{ctx: context.Background(), registry: registry,
 		profiles: profiles.New(profiles.JSONRepository{}, profiles.SystemKeyring{}, registry.ValidateProfile),

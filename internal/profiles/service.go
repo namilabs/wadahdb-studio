@@ -123,8 +123,11 @@ func (s *Service) Resolve(id string, temporaryPassword *string) (model.Connectio
 
 // Validate checks shared connection fields and delegates engine-specific requirements.
 func (s *Service) Validate(p model.ConnectionProfile) error {
-	if strings.TrimSpace(p.Name) == "" || strings.TrimSpace(p.Host) == "" || p.Port < 1 || p.Port > 65535 {
-		return errors.New("Valid name, host, port and engine are required")
+	if strings.TrimSpace(p.Name) == "" || strings.TrimSpace(p.Engine) == "" {
+		return errors.New("Valid name and engine are required")
+	}
+	if p.Engine != "sqlite" && (strings.TrimSpace(p.Host) == "" || p.Port < 1 || p.Port > 65535) {
+		return errors.New("Valid host and port are required")
 	}
 	if e := s.validate(p); e != nil {
 		return e

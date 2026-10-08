@@ -7,6 +7,7 @@ The root Go module and Wails configuration replace the Tauri backend. React keep
 ## Compatibility
 
 - Profiles retain `$XDG_CONFIG_HOME/dev.nanti.sql/profiles.json` (default `~/.config/dev.nanti.sql/profiles.json`), with the existing camelCase JSON fields.
+- SQLite profiles add an optional `databasePath` field while preserving existing MySQL/MariaDB profile fields.
 - Saved passwords use Secret Service attributes `service=dev.nanti.sql` and `username=<profile id>`. Existing secrets in the default collection are discoverable. Secrets in another collection may require entering and saving the password again.
 - Version 1 SQL backups retain their header, manifest, and statement delimiters. Restore relocates schema identifiers without rewriting strings or comments.
 - Wails has a different webview origin. Browser-local saved queries/history from the Tauri window are not automatically transferred. Keep the previous app available to copy saved SQL before switching. No existing profile or backup files are deleted.

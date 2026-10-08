@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"path/filepath"
 	"testing"
 	"wadahdb-studio/internal/engine"
 	"wadahdb-studio/internal/model"
@@ -11,6 +12,10 @@ import (
 func TestProfileCompatibility(t *testing.T) {
 	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
 	a := NewApp()
+	engines := a.ListEngines()
+	if len(engines) != 3 || engines[2].ID != "sqlite" {
+		t.Fatal(engines)
+	}
 	p := ConnectionProfile{Name: "dev", Engine: "mariadb", Host: "localhost", Port: 3306, Username: "root"}
 	p, e := a.SaveProfile(SaveProfileInput{Profile: p})
 	if e != nil {
@@ -22,6 +27,12 @@ func TestProfileCompatibility(t *testing.T) {
 	}
 	if e = a.DeleteProfile(p.ID); e != nil {
 		t.Fatal(e)
+	}
+	dbPath := filepath.Join(t.TempDir(), "sqlite.db")
+	sqlite := ConnectionProfile{Name: "local", Engine: "sqlite", DatabasePath: &dbPath}
+	sqlite, e = a.SaveProfile(SaveProfileInput{Profile: sqlite})
+	if e != nil || sqlite.DatabasePath == nil || *sqlite.DatabasePath != dbPath {
+		t.Fatal(sqlite, e)
 	}
 }
 

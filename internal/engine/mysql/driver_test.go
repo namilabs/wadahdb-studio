@@ -14,11 +14,14 @@ func TestRegisteredEnginesAndValidation(t *testing.T) {
 		if e := r.Register(d); e != nil {
 			t.Fatal(e)
 		}
-		if e := d.ValidateProfile(model.ConnectionProfile{Engine: id, Username: "root"}); e != nil {
+		if e := d.ValidateProfile(model.ConnectionProfile{Engine: id, Host: "localhost", Port: 3306, Username: "root"}); e != nil {
 			t.Fatal(e)
 		}
 		if e := d.ValidateProfile(model.ConnectionProfile{Engine: "redis", Username: "root"}); e == nil {
 			t.Fatal("wrong protocol accepted")
+		}
+		if e := d.ValidateProfile(model.ConnectionProfile{Engine: id, Port: 3306, Username: "root"}); e == nil {
+			t.Fatal("empty host accepted")
 		}
 		if e := d.ValidateProfile(model.ConnectionProfile{Engine: id}); e == nil {
 			t.Fatal("empty username accepted")
